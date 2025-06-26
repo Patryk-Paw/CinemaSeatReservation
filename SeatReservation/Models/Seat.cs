@@ -15,5 +15,7 @@ namespace SeatReservation.Models
 
         public int MovieId { get; set; }
         public Movie? Movie { get; set; }
+
+        public Booking? Booking { get; set; }  
     }
 }

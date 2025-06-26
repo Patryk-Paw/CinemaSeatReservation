@@ -1,49 +1,68 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.Maui.Controls;
+using SeatReservation.Models;
+using SeatReservation.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using SeatReservation.Models;
-using SeatReservation.Services;
-using SeatReservation.ViewModels;
-using Microsoft.Maui.Controls;
 
 namespace SeatReservation.ViewModels
 {
     public class SeatSelectionViewModel : INotifyPropertyChanged
     {
-        private SeatReservationDatabase _db = new();
-        public ObservableCollection<SeatViewModel> GroupedSeats { get; set; } = new();
-        public string MovieTitle { get; set; } = string.Empty;
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string name = "") =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public ICommand SelectSeatCommand { get; }
+        internal readonly SeatReservationDatabase _db = new();
 
-        public SeatSelectionViewModel()
+        public ObservableCollection<SeatViewModel> Seats { get; } = new();
+
+        private Movie? _selectedMovie;
+        public Movie? SelectedMovie
         {
-            SelectSeatCommand = new Command<SeatViewModel>(async (seat) => await ReserveSeatAsync(seat));
-        }
-
-        public async Task LoadSeatsAsync(int movieId)
-        {
-            GroupedSeats.Clear();
-            var movie = (await _db.GetMoviesAsync()).FirstOrDefault(m => m.MovieId == movieId);
-            if (movie == null) return;
-
-            MovieTitle = $"{movie.MovieTitle} ({movie.ShowTime:HH:mm})";
-            OnPropertyChanged(nameof(MovieTitle));
-
-            var seats = movie.Seats.OrderBy(s => s.SeatRow).ThenBy(s => s.SeatNumber);
-            foreach (var s in seats)
+            get => _selectedMovie;
+            set
             {
-                GroupedSeats.Add(new SeatViewModel(s));
+                if (_selectedMovie != value)
+                {
+                    _selectedMovie = value;
+                    OnPropertyChanged();
+                    if (_selectedMovie != null)
+                        _ = LoadSeatsAsync();
+                }
             }
         }
 
-        private async Task ReserveSeatAsync(SeatViewModel seatVM)
+        public ICommand ReserveSeatCommand { get; }
+
+        public SeatSelectionViewModel()
         {
-            if (seatVM.Seat.IsReserved)
+            ReserveSeatCommand = new Command<SeatViewModel>(async (seatVm) => await ReserveSeatAsync(seatVm));
+        }
+
+        public async Task LoadSeatsAsync()
+        {
+            if (SelectedMovie == null) return;
+
+            Seats.Clear();
+
+            var allSeats = await _db.GetSeatsAsync();
+            var movieSeats = allSeats.Where(s => s.MovieId == SelectedMovie.MovieId)
+                                     .OrderBy(s => s.SeatRow)
+                                     .ThenBy(s => s.SeatNumber);
+
+            foreach (var seat in movieSeats)
+            {
+                Seats.Add(new SeatViewModel(seat));
+            }
+        }
+
+        private async Task ReserveSeatAsync(SeatViewModel seatVm)
+        {
+            if (seatVm.Seat.IsReserved)
             {
                 await Application.Current.MainPage.DisplayAlert("Zajęte", "To miejsce jest już zarezerwowane", "OK");
                 return;
@@ -52,22 +71,21 @@ namespace SeatReservation.ViewModels
             string? userName = await Application.Current.MainPage.DisplayPromptAsync("Rezerwacja", "Podaj imię");
             if (string.IsNullOrWhiteSpace(userName)) return;
 
+            seatVm.IsReserved = true;
+
+            await _db.SaveSeatAsync(seatVm.Seat);
+
             var booking = new Booking
             {
-                SeatId = seatVM.Seat.SeatId,
-                BookingTime = DateTime.Now,
-                UserName = userName
+                SeatId = seatVm.Seat.SeatId,
+                MovieId = seatVm.Seat.MovieId,
+                UserName = userName,
+                BookingTime = System.DateTime.Now,
             };
 
-            seatVM.Seat.IsReserved = true;
-
             await _db.SaveBookingAsync(booking);
-            await _db.SaveSeatAsync(seatVM.Seat);
-            await LoadSeatsAsync(seatVM.Seat.MovieId); 
+
+            await LoadSeatsAsync();
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
-
 }

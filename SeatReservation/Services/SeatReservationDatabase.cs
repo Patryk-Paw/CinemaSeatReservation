@@ -48,6 +48,7 @@ namespace SeatReservation.Services
                             db.Seats.Add(s);
                         }
                     }
+                    await db.SaveChangesAsync(); 
                 }
             }
 
@@ -89,9 +90,9 @@ namespace SeatReservation.Services
         {
             using var db = new SeatReservationContext();
             return await db.Bookings
-                           .Include(b => b.Seat)
-                           .ThenInclude(s => s.Movie)
-                           .ToListAsync();
+                .Include(b => b.Seat)
+                .ThenInclude(s => s.Movie)
+                .ToListAsync();
         }
 
         public async Task SaveBookingAsync(Booking booking)

@@ -1,71 +1,53 @@
-﻿using Microsoft.Maui.Controls;
-using SeatReservation.Models;
-using SeatReservation.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using System.Windows.Input;
+using SeatReservation.Models;
 
 namespace SeatReservation.ViewModels
 {
     public class SeatViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string name = null) =>
+
+        private void OnPropertyChanged([CallerMemberName] string name = "") =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        private readonly SeatReservationDatabase _db = new();
+        private Seat _seat;
 
-        public ObservableCollection<Seat> Seats { get; set; } = new();
-
-        public Movie? SelectedMovie { get; set; }
-
-        public ICommand ReserveSeatCommand { get; }
-
-        public SeatViewModel(Movie selectedMovie)
+        public Seat Seat
         {
-            SelectedMovie = selectedMovie;
-            ReserveSeatCommand = new Command<Seat>(async (seat) => await ReserveSeatAsync(seat));
-            _ = LoadSeatsAsync();
-        }
-
-        private async Task LoadSeatsAsync()
-        {
-            if (SelectedMovie == null) return;
-
-            var allSeats = await _db.GetSeatsAsync();
-            var movieSeats = allSeats.Where(s => s.MovieId == SelectedMovie.MovieId);
-
-            Seats.Clear();
-            foreach (var seat in movieSeats)
-                Seats.Add(seat);
-        }
-
-        private async Task ReserveSeatAsync(Seat seat)
-        {
-            if (seat != null && !seat.IsReserved)
+            get => _seat;
+            set
             {
-                string? userName = await Application.Current.MainPage.DisplayPromptAsync("Rezerwacja", "Podaj swoje imię");
-                if (!string.IsNullOrWhiteSpace(userName))
+                if (_seat != value)
                 {
-                    seat.IsReserved = true;
-                    await _db.SaveSeatAsync(seat);
-
-                    var booking = new Booking
-                    {
-                        UserName = userName,
-                        SeatId = seat.SeatId,
-                        BookingTime = DateTime.Now
-                    };
-                    await _db.SaveBookingAsync(booking);
-
-                    await LoadSeatsAsync();
+                    _seat = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(IsReserved));
+                    OnPropertyChanged(nameof(SeatRow));
+                    OnPropertyChanged(nameof(SeatNumber));
                 }
             }
+        }
+
+        public bool IsReserved
+        {
+            get => Seat.IsReserved;
+            set
+            {
+                if (Seat.IsReserved != value)
+                {
+                    Seat.IsReserved = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int SeatRow => Seat.SeatRow;
+        public int SeatNumber => Seat.SeatNumber;
+
+        public SeatViewModel(Seat seat)
+        {
+            Seat = seat;
         }
     }
 }

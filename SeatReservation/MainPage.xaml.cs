@@ -1,27 +1,25 @@
-﻿using SeatReservation.ViewModels;
+﻿using Microsoft.Maui.Controls;
+using SeatReservation.ViewModels;
 using SeatReservation.Views;
 
 namespace SeatReservation
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
-        private SeatReservationViewModel _viewModel = new SeatReservationViewModel();
+        private MovieViewModel _viewModel = new MovieViewModel();
+
         public MainPage()
         {
             InitializeComponent();
+            BindingContext = _viewModel;
         }
 
-        private void OnCounterClicked(object? sender, EventArgs e)
+        private async void OnSelectMovieClicked(object sender, EventArgs e)
         {
-            count++;
-
-            if (count == 1)
-                CounterBtn.Text = $"Clicked {count} time";
-            else
-                CounterBtn.Text = $"Clicked {count} times";
-
-            SemanticScreenReader.Announce(CounterBtn.Text);
+            if (_viewModel.SelectedMovie != null)
+            {
+                await Navigation.PushAsync(new SeatSelectionPage(_viewModel.SelectedMovie.MovieId));
+            }
         }
     }
 }
