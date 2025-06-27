@@ -16,17 +16,21 @@
     </ContentPage.BindingContext>
 
     <StackLayout Padding="10">
+        <HorizontalStackLayout Spacing="10" Padding="0,10">
         <Button Text="Dodaj film" Command="{Binding AddMovieCommand}" />
-
+        <Button Text="Usuń zaznaczony film" Command="{Binding DeleteMovieCommand}" 
+                IsEnabled="{Binding IsMovieSelected}" />
+        </HorizontalStackLayout>
+        
         <CollectionView ItemsSource="{Binding Movies}"
                         SelectionMode="Single"
                         SelectedItem="{Binding SelectedMovie, Mode=TwoWay}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Frame BorderColor="Gray" Margin="5" Padding="10" CornerRadius="5">
+                    <Frame BorderColor="Blue" Margin="5" Padding="10" CornerRadius="5">
                         <StackLayout>
                             <Label Text="{Binding MovieTitle}" FontSize="18" />
-                            <Label Text="{Binding ShowTime, StringFormat='Godzina: {0:HH:mm}'}" FontSize="14" TextColor="Gray"/>
+                            <Label Text="{Binding ShowTime, StringFormat='Data i godzina: {0:dd.MM.yyyy HH:mm}'}" FontSize="14" TextColor="Gray"/>
                         </StackLayout>
                     </Frame>
                 </DataTemplate>

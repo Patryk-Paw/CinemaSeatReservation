@@ -27,10 +27,10 @@
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <Button Text="{Binding Seat.SeatNumber}"
-                    BackgroundColor="{Binding Seat.IsReserved, Converter={StaticResource ReservedToColorConverter}}"
-                    Command="{Binding BindingContext.ReserveSeatCommand, Source={x:Reference ThisPage}}"
-                    CommandParameter="{Binding}" />
+                        <Button Text="{Binding Label}"
+                                BackgroundColor="{Binding Seat.IsReserved, Converter={StaticResource ReservedToColorConverter}}"
+                                Command="{Binding BindingContext.ReserveSeatCommand, Source={x:Reference ThisPage}}"
+                                CommandParameter="{Binding}" />
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

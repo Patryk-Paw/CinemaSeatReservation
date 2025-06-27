@@ -11,7 +11,7 @@ namespace SeatReservation.ViewModels
 {
     public class MovieViewModel : INotifyPropertyChanged
     {
-        private SeatReservationDatabase _db = new();
+        private readonly SeatReservationDatabase _db = new();
 
         public ObservableCollection<Movie> Movies { get; set; } = new();
 
@@ -27,6 +27,7 @@ namespace SeatReservation.ViewModels
                     OnPropertyChanged(nameof(SelectedMovie));
                     OnPropertyChanged(nameof(IsMovieSelected));
                     ((Command)SelectMovieCommand).ChangeCanExecute();
+                    ((Command)DeleteMovieCommand).ChangeCanExecute();
                 }
             }
         }
@@ -35,11 +36,13 @@ namespace SeatReservation.ViewModels
 
         public ICommand AddMovieCommand { get; }
         public ICommand SelectMovieCommand { get; }
+        public ICommand DeleteMovieCommand { get; }
 
         public MovieViewModel()
         {
             AddMovieCommand = new Command(async () => await AddMovieAsync());
             SelectMovieCommand = new Command(async () => await GoToSeatPageAsync(), () => IsMovieSelected);
+            DeleteMovieCommand = new Command(async () => await DeleteSelectedMovieAsync(), () => IsMovieSelected);
 
             LoadMovies();
         }
@@ -49,28 +52,49 @@ namespace SeatReservation.ViewModels
             string? title = await Application.Current.MainPage.DisplayPromptAsync("Nowy Film", "Podaj tytuł filmu:");
             if (string.IsNullOrWhiteSpace(title)) return;
 
+            string? dateTime = await Application.Current.MainPage.DisplayPromptAsync(title, "Podaj datę i/lub godzinę filmu:");
+            if (string.IsNullOrWhiteSpace(dateTime)) return;
+
+            string? rowsNumber = await Application.Current.MainPage.DisplayPromptAsync(title, "Podaj liczbę rzędów:");
+            if (string.IsNullOrWhiteSpace(rowsNumber)) return;
+
+            if (!int.TryParse(rowsNumber, out int rowsNumberInt))
+            {
+                await Application.Current.MainPage.DisplayAlert("Błąd", "Niepoprawna liczba rzędów", "OK");
+                return;
+            }
+
             var movie = new Movie
             {
                 MovieTitle = title,
-                ShowTime = DateTime.Now.AddHours(2)
+                ShowTime = dateTime != null ? DateTime.Parse(dateTime) : DateTime.Now,
             };
 
-            await _db.SaveMovieAsync(movie, rows: 6, seatsPerRow: 8);
+            await _db.SaveMovieAsync(movie, rows: rowsNumberInt, seatsPerRow: 8);
             await LoadMovies();
         }
 
         private async Task GoToSeatPageAsync()
         {
-            if (SelectedMovie == null)
-            {
-                System.Diagnostics.Debug.WriteLine("SelectedMovie is null!");
-                return;
-            }
+            if (SelectedMovie == null) return;
 
             var movieId = SelectedMovie.MovieId;
             await Shell.Current.GoToAsync($"SeatSelectionPage?movieId={movieId}");
         }
 
+        private async Task DeleteSelectedMovieAsync()
+        {
+            if (SelectedMovie == null) return;
+
+            bool confirm = await Application.Current.MainPage.DisplayAlert(
+                "Potwierdzenie", $"Czy na pewno chcesz usunąć film \"{SelectedMovie.MovieTitle}\"?", "Tak", "Nie");
+
+            if (!confirm) return;
+
+            await _db.DeleteMovieAsync(SelectedMovie);
+            SelectedMovie = null;
+            await LoadMovies();
+        }
 
         private async Task LoadMovies()
         {

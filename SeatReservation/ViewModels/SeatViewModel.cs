@@ -45,6 +45,7 @@ namespace SeatReservation.ViewModels
         public int SeatRow => Seat.SeatRow;
         public int SeatNumber => Seat.SeatNumber;
 
+        public string Label => $"{(char)('A' + SeatRow)}-{SeatNumber + 1}";
         public SeatViewModel(Seat seat)
         {
             Seat = seat;
